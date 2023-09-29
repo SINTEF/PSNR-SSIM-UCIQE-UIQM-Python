@@ -8,12 +8,14 @@ Usage:
 python evaluate.py RESULT_PATH
 '''
 import numpy as np
-from skimage.measure import compare_psnr, compare_ssim
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
 import math
 import sys
 from skimage import io, color, filters
 import os
 import math
+import cv2
 
 def nmetrics(a):
     rgb = a
@@ -31,7 +33,7 @@ def nmetrics(a):
     sc = (np.mean((chroma - uc)**2))**0.5
 
     #2nd term
-    top = np.int(np.round(0.01*l.shape[0]*l.shape[1]))
+    top = int(np.round(0.01*l.shape[0]*l.shape[1]))
     sl = np.sort(l,axis=None)
     isl = sl[::-1]
     conl = np.mean(isl[:top])-np.mean(sl[:top])
@@ -61,8 +63,8 @@ def nmetrics(a):
     ybl = np.sort(yb,axis=None)
     al1 = 0.1
     al2 = 0.1
-    T1 = np.int(al1 * len(rgl))
-    T2 = np.int(al2 * len(rgl))
+    T1 = int(al1 * len(rgl))
+    T2 = int(al2 * len(rgl))
     rgl_tr = rgl[T1:-T2]
     ybl_tr = ybl[T1:-T2]
 
@@ -119,8 +121,8 @@ def eme(ch,blocksize=8):
             
             block = ch[xlb:xrb,ylb:yrb]
 
-            blockmin = np.float(np.min(block))
-            blockmax = np.float(np.max(block))
+            blockmin = float(np.min(block))
+            blockmax = float(np.max(block))
 
             # # old version
             # if blockmin == 0.0: eme += 0
@@ -142,7 +144,7 @@ def plipsub(i,j,k=1026):
 def plipmult(c,j,gamma=1026):
     return gamma - gamma * (1 - j / gamma)**c
 
-def logamee(ch,blocksize=8):
+def logamee(ch,blocksize=16):
 
     num_x = math.ceil(ch.shape[0] / blocksize)
     num_y = math.ceil(ch.shape[1] / blocksize)
@@ -166,8 +168,8 @@ def logamee(ch,blocksize=8):
                 yrb = ch.shape[1]
             
             block = ch[xlb:xrb,ylb:yrb]
-            blockmin = np.float(np.min(block))
-            blockmax = np.float(np.max(block))
+            blockmin = float(np.min(block))
+            blockmax = float(np.max(block))
 
             top = plipsub(blockmax,blockmin)
             bottom = plipsum(blockmax,blockmin)
@@ -180,33 +182,66 @@ def logamee(ch,blocksize=8):
 
     return plipmult(w,s)
 
+import cv2
+# ... [rest of your imports]
+
+def display_indicator(image, uiqm, uciqe):
+    # Define thresholds for the indicators (you can adjust these)
+    threshold_low = 0.3
+    threshold_high = 0.7
+
+    # Determine the color based on the metrics
+    if uiqm > threshold_high or uciqe > threshold_high:
+        color = (0, 255, 0)  # Green
+    elif uiqm > threshold_low or uciqe > threshold_low:
+        color = (0, 255, 255)  # Yellow
+    else:
+        color = (0, 0, 255)  # Red
+
+    # Draw a circle indicator on the top-left corner of the image
+    cv2.circle(image, (50, 50), 30, color, -1)
+
+    return image
+
 def main():
-    result_path = sys.argv[1]
+    video_path = sys.argv[1]
+    result_path = sys.argv[2]
+    cap = cv2.VideoCapture(video_path)
+    
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-    result_dirs = os.listdir(result_path)
+    # Use 'X264' or 'avc1' for H.264 encoding
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    result = cv2.VideoWriter(result_path, fourcc, fps, (width, height))
 
-    sumuiqm, sumuciqe = 0.,0.
+    if not result.isOpened():
+        print("Error: Couldn't create the output video.")
+        return
 
-    N=0
-    for imgdir in result_dirs:
-        if '.png' in imgdir:
-            #corrected image
-            corrected = io.imread(os.path.join(result_path,imgdir))
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-            uiqm,uciqe = nmetrics(corrected)
+        uiqm, uciqe = nmetrics(frame)
+        frame_with_indicator = display_indicator(frame, uiqm, uciqe)
+        print("frame: ", uiqm, uciqe)
 
-            sumuiqm += uiqm
-            sumuciqe += uciqe
-            N +=1
+        # save the resulting frames as a video
+        result.write(frame_with_indicator)
+        count = count + 1
+        #if count == 100:
+        #    print("processed: ", count, "/", frame_count)
+        #    break
 
-            with open(os.path.join(result_path,'metrics.txt'), 'a') as f:
-                f.write('{}: uiqm={} uciqe={}\n'.format(imgdir,uiqm,uciqe))
 
-    muiqm = sumuiqm/N
-    muciqe = sumuciqe/N
-
-    with open(os.path.join(result_path,'metrics.txt'), 'a') as f:
-        f.write('Average: uiqm={} uciqe={}\n'.format(muiqm, muciqe))
+    cap.release()
+    result.release()
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

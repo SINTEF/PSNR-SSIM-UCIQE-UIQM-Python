@@ -8,7 +8,8 @@ Usage:
 python evaluate.py RESULT_PATH REFERENCE_PATH
 '''
 import numpy as np
-from skimage.measure import compare_psnr, compare_ssim
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
 import math
 import sys
 from skimage import io, color, filters
@@ -22,7 +23,7 @@ def rmetrics(a,b):
     psnr = 10*math.log10(1/mse)
 
     #ssim
-    ssim = compare_ssim(a,b,multichannel=True)
+    ssim = compare_ssim(a,b,win_size=3, multichannel=True)
 
     return psnr, ssim
 
@@ -42,7 +43,7 @@ def nmetrics(a):
     sc = (np.mean((chroma - uc)**2))**0.5
 
     #2nd term
-    top = np.int(np.round(0.01*l.shape[0]*l.shape[1]))
+    top = int(np.round(0.01*l.shape[0]*l.shape[1]))
     sl = np.sort(l,axis=None)
     isl = sl[::-1]
     conl = np.mean(isl[:top])-np.mean(sl[:top])
@@ -72,8 +73,8 @@ def nmetrics(a):
     ybl = np.sort(yb,axis=None)
     al1 = 0.1
     al2 = 0.1
-    T1 = np.int(al1 * len(rgl))
-    T2 = np.int(al2 * len(rgl))
+    T1 = int(al1 * len(rgl))
+    T2 = int(al2 * len(rgl))
     rgl_tr = rgl[T1:-T2]
     ybl_tr = ybl[T1:-T2]
 
@@ -130,8 +131,8 @@ def eme(ch,blocksize=8):
             
             block = ch[xlb:xrb,ylb:yrb]
 
-            blockmin = np.float(np.min(block))
-            blockmax = np.float(np.max(block))
+            blockmin = float(np.min(block))
+            blockmax = float(np.max(block))
 
             # # old version
             # if blockmin == 0.0: eme += 0
@@ -153,7 +154,7 @@ def plipsub(i,j,k=1026):
 def plipmult(c,j,gamma=1026):
     return gamma - gamma * (1 - j / gamma)**c
 
-def logamee(ch,blocksize=8):
+def logamee(ch,blocksize=3):
 
     num_x = math.ceil(ch.shape[0] / blocksize)
     num_y = math.ceil(ch.shape[1] / blocksize)
@@ -177,8 +178,8 @@ def logamee(ch,blocksize=8):
                 yrb = ch.shape[1]
             
             block = ch[xlb:xrb,ylb:yrb]
-            blockmin = np.float(np.min(block))
-            blockmax = np.float(np.max(block))
+            blockmin = float(np.min(block))
+            blockmax = float(np.max(block))
 
             top = plipsub(blockmax,blockmin)
             bottom = plipsum(blockmax,blockmin)
@@ -202,13 +203,13 @@ def main():
 
     N=0
     for imgdir in result_dirs:
-        if '.png' in imgdir:
+        if '.jpg' in imgdir:
             #corrected image
             corrected = io.imread(os.path.join(result_path,imgdir))
 
             #reference image
             imgname = imgdir.split('corrected')[0]
-            refdir = imgname+'.png'
+            refdir = imgname + '.jpg'
             reference = io.imread(os.path.join(reference_path,refdir))
 
             psnr,ssim = rmetrics(corrected,reference)
