@@ -173,8 +173,10 @@ def logamee(ch,blocksize=16):
 
             top = plipsub(blockmax,blockmin)
             bottom = plipsum(blockmax,blockmin)
-
-            m = top/bottom
+            if bottom == 0.0:
+                m = 0.0
+            else:
+                m = top/bottom
             if m ==0.:
                 s+=0
             else:
@@ -187,20 +189,25 @@ import cv2
 
 def display_indicator(image, uiqm, uciqe):
     # Define thresholds for the indicators (you can adjust these)
-    threshold_low = 0.3
-    threshold_high = 0.7
+    uiqm_threshold_low = 0.3
+    uiqm_threshold_high = 0.5
+
+    uciqe_threshold_low = 15
+    uciqe_threshold_high = 20
 
     # Determine the color based on the metrics
-    if uiqm > threshold_high or uciqe > threshold_high:
+    if uiqm > uiqm_threshold_high or uciqe > uciqe_threshold_high:
         color = (0, 255, 0)  # Green
-    elif uiqm > threshold_low or uciqe > threshold_low:
+    elif uiqm > uiqm_threshold_low or uciqe > uciqe_threshold_low:
         color = (0, 255, 255)  # Yellow
     else:
         color = (0, 0, 255)  # Red
 
     # Draw a circle indicator on the top-left corner of the image
     cv2.circle(image, (50, 50), 30, color, -1)
-
+    # add the numarical values next to the circle indicator
+    cv2.putText(image, "UIQM: {:.2f}, UCIQE: {:.2f}".format(uiqm, uciqe), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+    print("uiqm: ", uiqm, " uciqe: ", uciqe)
     return image
 
 def main():
@@ -234,10 +241,7 @@ def main():
         # save the resulting frames as a video
         result.write(frame_with_indicator)
         count = count + 1
-        #if count == 100:
-        #    print("processed: ", count, "/", frame_count)
-        #    break
-
+        
 
     cap.release()
     result.release()
