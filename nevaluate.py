@@ -189,24 +189,27 @@ import cv2
 
 def display_indicator(image, uiqm, uciqe):
     # Define thresholds for the indicators (you can adjust these)
-    uiqm_threshold_low = 0.3
-    uiqm_threshold_high = 0.5
+    #uiqm_threshold_low = 0.5
+    #uiqm_threshold_high = 0.75
 
-    uciqe_threshold_low = 15
-    uciqe_threshold_high = 20
+    uciqe_threshold_low = 20
+    uciqe_threshold_high = 27
 
     # Determine the color based on the metrics
-    if uiqm > uiqm_threshold_high or uciqe > uciqe_threshold_high:
-        color = (0, 255, 0)  # Green
-    elif uiqm > uiqm_threshold_low or uciqe > uciqe_threshold_low:
-        color = (0, 255, 255)  # Yellow
+    if uciqe > uciqe_threshold_high:
+        #color = (0, 255, 0)  # Green
+        color = (0, 255, 0)
+    elif uciqe > uciqe_threshold_low:
+        #color = (0, 255, 255)  # Yellow
+        color = (255, 255, 0)
     else:
-        color = (0, 0, 255)  # Red
+        #color = (0, 0, 255)  # Red
+        color = (255, 0, 0)
 
     # Draw a circle indicator on the top-left corner of the image
     cv2.circle(image, (50, 50), 30, color, -1)
     # add the numarical values next to the circle indicator
-    cv2.putText(image, "UIQM: {:.2f}, UCIQE: {:.2f}".format(uiqm, uciqe), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+    cv2.putText(image, "UCIQE: {:.2f}".format(uciqe), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
     print("uiqm: ", uiqm, " uciqe: ", uciqe)
     return image
 
