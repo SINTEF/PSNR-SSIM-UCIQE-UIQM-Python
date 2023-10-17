@@ -7,7 +7,8 @@ To get started, first clone this repo:
 
 ```
 git clone git@gitlab.sintef.no:Iroshani.Jayawardene/image_quality_demonstrator.git
-cd PSNR-SSIM-UCIQE-UIQM-Python
+cd image_quality_demonstrator
+
 ```
 
 

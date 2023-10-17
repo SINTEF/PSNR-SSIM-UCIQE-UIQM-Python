@@ -14,7 +14,6 @@ import math
 import sys
 from skimage import io, color, filters
 import math
-import dash_core_components as dcc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 
